@@ -10,11 +10,46 @@ Description: Indexes videos by extracting audio, transcribing it and indexing th
 # The Items section defines values and resources for the module.
 Items:
 
-  - Variable: MyVariable
-    Description: Variable description
-    Value: A sample variable value for the module
+  - Parameter: VideoBucket
+    Description: S3 Bucket for uploading videos
+    Section: VideoIndexer Settings
+    Label: Video Source Bucket
+    Type: AWS::S3::Bucket
+    Allow: Full
+    Default: ""
+    Properties: { }
+
+  - Parameter: ExtractedAudioBucket
+    Description: S3 Bucket for storing the extracted audio files
+    Section: VideoIndexer Settings
+    Label: Extracted Audio Bucket
+    Scope: ExtractAudio
+    Type: AWS::S3::Bucket
+    Allow: ReadWrite
+    Default: ""
+    Properties: { }
 
   - Function: ExtractAudio
-    Description: TO-DO - update function description
-    Memory: 256
-    Timeout: 30
+    Description: Function to extract audio from videos
+    Memory: 1024
+    Timeout: 300
+    Properties:
+      Layers:
+        - !Ref FFmpeg::Layer
+    Sources:
+      - S3: VideoBucket
+
+  - Group: FFmpeg
+    Description: Create Lambda layer with FFmpeg binary
+    Items:
+
+      - Resource: Layer
+        Type: AWS::Lambda::LayerVersion
+        Properties:
+          LicenseInfo: GPL-3.0-only
+          Content:
+            S3Bucket: !Ref DeploymentBucketName
+            S3Key: !Ref FFmpeg::FFmpegPackage
+
+      - Package: FFmpegPackage
+        Files: Assets/FFmpeg-Layer/
