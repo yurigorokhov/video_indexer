@@ -16,10 +16,7 @@ using LambdaSharp;
 
 namespace My.VideoIndexer.ExtractAudio {
 
-    public class FunctionResponse {
-
-        //--- Properties ---
-    }
+    public class FunctionResponse { }
 
     public class Function : ALambdaFunction<S3Event, FunctionResponse> {
 
@@ -37,8 +34,6 @@ namespace My.VideoIndexer.ExtractAudio {
         }
 
         public override async Task<FunctionResponse> ProcessMessageAsync(S3Event request) {
-
-            // TO-DO: add business logic
             foreach(var record in request.Records) {
                 string originalFilePath = null;
                 string convertedFilePath = null;
@@ -87,6 +82,7 @@ namespace My.VideoIndexer.ExtractAudio {
                     LogError(e);
                 } finally {
                     DeleteFile(originalFilePath);
+                    DeleteFile(convertedFilePath);
                 }
             }
             return new FunctionResponse();

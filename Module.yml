@@ -29,6 +29,16 @@ Items:
     Default: ""
     Properties: { }
 
+  - Parameter: ExtractedTextBucket
+    Description: S3 Bucket for storing the extracted text files
+    Section: VideoIndexer Settings
+    Label: Extracted Text Bucket
+    Scope: ExtractText
+    Type: AWS::S3::Bucket
+    Allow: ReadWrite
+    Default: ""
+    Properties: { }
+
   - Function: ExtractAudio
     Description: Function to extract audio from videos
     Memory: 1024
@@ -53,3 +63,18 @@ Items:
 
       - Package: FFmpegPackage
         Files: Assets/FFmpeg-Layer/
+
+  - Function: ExtractText
+    Description: Function to extract text from an audio MP3
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - S3: ExtractedAudioBucket
+        Prefix: audio/
+        Suffix: .mp3
+
+  - Resource: TranscribePermissions
+    Scope: ExtractText
+    Value: "*"
+    Allow:
+      - transcribe:StartTranscriptionJob
