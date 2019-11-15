@@ -78,3 +78,24 @@ Items:
     Value: "*"
     Allow:
       - transcribe:StartTranscriptionJob
+
+  - Resource: ProgressQueue
+    Scope: all
+    Type: AWS::SQS::Queue
+    Allow: Send,Receive
+    Properties:
+      DelaySeconds: 300
+      VisibilityTimeout: 300
+
+  - Function: ProcessTranscribeJob
+    Description: Function that looks for finished transcription jobs
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - Sqs: ProgressQueue
+
+  - Resource: GetTranscribePermissions
+    Scope: ProcessTranscribeJob
+    Value: "*"
+    Allow:
+      - transcribe:GetTranscriptionJob

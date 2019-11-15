@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Demo.WebSocketsChat.Common</RootNamespace>
+    <NoWarn>CS1998</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.17.5"/>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1"/>
+    <PackageReference Include="AWSSDK.TranscribeService" Version="3.3.109" />
+  </ItemGroup>
+</Project>
