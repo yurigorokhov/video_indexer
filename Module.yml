@@ -99,3 +99,17 @@ Items:
     Value: "*"
     Allow:
       - transcribe:GetTranscriptionJob
+
+  - Resource: IndexingStatusTable
+    Allow: ReadWrite
+    Scope: all
+    Description: Table to keep track of video indexing status
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: VideoEtag
+          AttributeType: S
+      KeySchema:
+        - AttributeName: VideoEtag
+          KeyType: HASH

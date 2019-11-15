@@ -8,8 +8,11 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.S3Events;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.DynamoDBv2;
 
 using LambdaSharp;
+
+using My.VideoIndexer.Common;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -22,12 +25,17 @@ namespace My.VideoIndexer.ExtractAudio {
 
         //--- Fields ---
         private IAmazonS3 _s3Client;
+        private IndexingStatusTable _table;
         private string _destinationBucketName;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
             _s3Client = new AmazonS3Client();
             _destinationBucketName = config.ReadS3BucketName("ExtractedAudioBucket");
+            _table = new IndexingStatusTable(
+                config.ReadDynamoDBTableName("IndexingStatusTable"),
+                new AmazonDynamoDBClient()
+            );
 
             // show contents of /opt folder; the 'ffmpeg' file must have execution permissions to be invocable
             LogInfo(Exec("/bin/bash", "-c \"ls -al /opt\"").Output);
@@ -35,6 +43,10 @@ namespace My.VideoIndexer.ExtractAudio {
 
         public override async Task<FunctionResponse> ProcessMessageAsync(S3Event request) {
             foreach(var record in request.Records) {
+
+                // the video etag will be used as the primary key in the database
+                var videoEtag = record.S3.Object.ETag;
+
                 string originalFilePath = null;
                 string convertedFilePath = null;
                 try {
@@ -45,6 +57,7 @@ namespace My.VideoIndexer.ExtractAudio {
                         BucketName = record.S3.Bucket.Name,
                         Key = record.S3.Object.Key
                     });
+                    
                     originalFilePath = $"/tmp/{Path.GetFileName(record.S3.Object.Key)}";
                     await response.WriteResponseStreamToFileAsync(
                         filePath: originalFilePath,
@@ -71,12 +84,17 @@ namespace My.VideoIndexer.ExtractAudio {
                     }
 
                     // upload converted file
-                    var targetKey = Path.Combine("audio", Path.GetDirectoryName(record.S3.Object.Key), Path.GetFileName(convertedFilePath));
+                    var targetKey = Util.GetAudioS3Key(videoEtag);
                     LogInfo($"uploading 's3://{_destinationBucketName}/{targetKey}'");
                     await _s3Client.PutObjectAsync(new PutObjectRequest {
                         BucketName = _destinationBucketName,
                         Key = targetKey,
                         FilePath = convertedFilePath
+                    });
+                    await _table.PutRowAsync(new IndexingStatus {
+                        VideoEtag = videoEtag,
+                        VideoS3Key = record.S3.Object.Key,
+                        TranscriptionS3Key = null
                     });
                 } catch(Exception e) {
                     LogError(e);

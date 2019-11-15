@@ -7,6 +7,7 @@ using LambdaSharp.SimpleQueueService;
 using LambdaSharp.Exceptions;
 using Amazon.TranscribeService;
 using Amazon.TranscribeService.Model;
+using Amazon.DynamoDBv2;
 
 using Newtonsoft.Json;
 
@@ -21,19 +22,24 @@ namespace My.VideoIndexer.ProcessTranscribeJob {
 
         //--- Fields ---
         private AmazonTranscribeServiceClient _transcribe;
+        private IndexingStatusTable _table;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
             _transcribe = new AmazonTranscribeServiceClient();
-
-            // TO-DO: add function initialization and reading configuration settings
+            _table = new IndexingStatusTable(
+                config.ReadDynamoDBTableName("IndexingStatusTable"),
+                new AmazonDynamoDBClient()
+            );
         }
 
         public override async Task ProcessMessageAsync(ProgressMessage message) {
             if(message.Type == MessageType.INDEXING_STARTED) {
+                
                 var indexingMessage = JsonConvert.DeserializeObject<IndexingStartedMessage>(message.Message);
                 var jobName = indexingMessage.Job.TranscriptionJob.TranscriptionJobName;
-                
+                var videoEtag = jobName.Substring("transcribe-".Length);
+
                 LogInfo($"Received job: {jobName}");
 
                 var response = await _transcribe.GetTranscriptionJobAsync(new GetTranscriptionJobRequest{
@@ -46,6 +52,12 @@ namespace My.VideoIndexer.ProcessTranscribeJob {
 
                         var transciptUri = response.TranscriptionJob.Transcript.TranscriptFileUri;
                         LogInfo($"Job {jobName} has completed successfully. The results are here: {transciptUri}");
+                        
+                        // update the transcription uri in the DB
+                        await _table.UpdateRowAsync(new IndexingStatus {
+                            VideoEtag = videoEtag,
+                            TranscriptionS3Key = transciptUri
+                        });
                         break;
                     case "FAILED":
                         LogWarn($"Job {jobName} has failed");

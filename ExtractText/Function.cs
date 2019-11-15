@@ -42,12 +42,16 @@ namespace My.VideoIndexer.ExtractText {
         public override async Task<FunctionResponse> ProcessMessageAsync(S3Event request) {
             foreach(var record in request.Records) {
                 LogInfo($"processing 's3://{record.S3.Bucket.Name}/{record.S3.Object.Key}'");
+                
+                // extract the video etag from the filename
+                var videoEtag = Path.GetFileNameWithoutExtension(record.S3.Object.Key);
+                
                 try {
 
                     // kick off a transcribe job
                     var transcriptionResponse = await _transcribe.StartTranscriptionJobAsync(
                         new StartTranscriptionJobRequest{
-                            TranscriptionJobName=$"transcribe-{record.S3.Object.ETag}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+                            TranscriptionJobName=$"transcribe-{videoEtag}",
                             Media = new Media{
                                 MediaFileUri=$"https://s3-{record.AwsRegion}.amazonaws.com/{record.S3.Bucket.Name}/{record.S3.Object.Key}"
                             },
