@@ -51,6 +51,8 @@ namespace My.VideoIndexer.ExtractText {
                     // kick off a transcribe job
                     var transcriptionResponse = await _transcribe.StartTranscriptionJobAsync(
                         new StartTranscriptionJobRequest{
+
+                            // TODO: need a better name (add timestamp?) so that we can re-transcribe a transcribed video
                             TranscriptionJobName=$"transcribe-{videoEtag}",
                             Media = new Media{
                                 MediaFileUri=$"https://s3-{record.AwsRegion}.amazonaws.com/{record.S3.Bucket.Name}/{record.S3.Object.Key}"

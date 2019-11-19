@@ -84,7 +84,7 @@ Items:
     Type: AWS::SQS::Queue
     Allow: Send,Receive
     Properties:
-      DelaySeconds: 300
+      DelaySeconds: 120
       VisibilityTimeout: 300
 
   - Function: ProcessTranscribeJob
